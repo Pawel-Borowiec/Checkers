@@ -1,0 +1,335 @@
+﻿@page "/"
+@using System.Security.Cryptography.X509Certificates
+@using Checkers.Models
+@using Checkers.Components.Elements
+@using Microsoft.Extensions.Internal
+@rendermode InteractiveServer
+
+<style>
+    .board
+    {
+        display: flex;
+        flex-direction: column;
+        margin: 10px;
+        width: fit-content;
+    }
+    .row
+    {
+        display: flex;
+        width: fit-content;
+        
+    }
+</style>
+<PageTitle>Checkers</PageTitle>
+
+
+<div>
+    <p>Obecna kolej: @CurrentPlayer.Color.ToString()</p>
+    <p>Wynik:</p>
+    <p>Biały: @FirstPlayer.Pawns.Count</p>
+    <p>Czarny: @SecondPlayer.Pawns.Count</p>
+</div>
+
+<div class="board">
+    @for (int i = 0; i < 10; i++)
+    {
+        <div class="row" >
+            @for (int j = 0; j < 10; j++)
+            {
+                <Tile X="@i" Y="@j" Pawn="GetPawnForSpecificTile(i,j)" ParentMethod="HandleClickAsync"></Tile>
+            }
+        </div>
+        <br/>
+
+    }
+</div>
+
+<History/>
+
+
+
+
+@code{
+    public List<TileModel> Tiles { get; set; }
+    public Player FirstPlayer { get; set; }
+    public Player SecondPlayer { get; set; }
+    public Player CurrentPlayer { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        Tiles = new List<TileModel>();
+        for (int i = 0; i < 10; i++)
+        {
+            for (int j = 0; j < 10; j++)
+            {
+                Tiles.Add(new TileModel(i,j));
+            }
+        }
+
+        FirstPlayer = new Player(Color.WHITE);
+        SecondPlayer = new Player(Color.BLACK);
+        CurrentPlayer = FirstPlayer;
+        return base.OnInitializedAsync();
+    }
+
+    private Pawn GetPawnForSpecificTile(int x, int y)
+    {
+        var pawn = FirstPlayer.Pawns.FirstOrDefault(p => p.X == x && p.Y == y);
+        if (pawn is not null)
+        {
+            return pawn;
+        }
+        pawn = SecondPlayer.Pawns.FirstOrDefault(p => p.X == x && p.Y == y);
+
+        return pawn;
+
+    }
+
+    private bool HandleClickAsync(int x, int y)
+    {
+        var oldPawnPosition = CurrentPlayer.Pawns.FirstOrDefault(x => x.IsActive);
+        
+        if (oldPawnPosition is null)
+        {
+            var pawn = CurrentPlayer.Pawns.FirstOrDefault(p=> p.X == x && p.Y == y);
+            if (pawn is null)
+            {
+                return false;
+            }
+            pawn.IsActive = true;
+            StateHasChanged();
+            return false;
+        }
+        
+        if (oldPawnPosition.X == x && oldPawnPosition.Y == y)
+        {
+            Console.WriteLine("Deaktywacja");
+            oldPawnPosition.IsActive = false;
+            StateHasChanged();
+            return false;
+        }
+        
+        Console.WriteLine($"{oldPawnPosition.X} {oldPawnPosition.Y} TO {x} {y}");
+
+        if (IsFieldAvalaible(oldPawnPosition.X, oldPawnPosition.Y, x, y, oldPawnPosition.IsCrowned))
+        {
+            Console.WriteLine("GIT");
+        }
+        else
+        {
+            Console.WriteLine(("NIE"));
+            return false;
+        }
+
+        oldPawnPosition.X = x;
+        oldPawnPosition.Y = y;
+        oldPawnPosition.IsActive = false;
+        
+        if (CurrentPlayer.Equals(FirstPlayer))
+        {
+            if (x == 9)
+            {
+                oldPawnPosition.IsCrowned = true;
+            }
+            CurrentPlayer = SecondPlayer;
+        }
+        else
+        {
+            CurrentPlayer = FirstPlayer;
+            if (x == 0)
+            {
+                oldPawnPosition.IsCrowned = true;
+            }
+        }
+        StateHasChanged();
+        return true;
+    }
+
+    private bool IsFieldAvalaible(int oldX, int oldY, int newX, int newY, bool IsCrowned)
+    {
+        return IsCrowned ? IsFieldAvalaibleForQueen(oldX, oldY, newX, newY) : IsFieldAvalaibleForPawn(oldX, oldY, newX, newY);
+    }
+
+    private bool IsFieldAvalaibleForQueen(int oldX, int oldY, int newX, int newY)
+    {
+        Pawn otherPawn;
+        if (!IsFieldOccupied(newX, newY)) return false;
+        
+        //bicie
+        if (oldX + oldY == newX + newY)
+        {
+            if (CurrentPlayer.Equals(FirstPlayer))
+            {
+                // tu warunki są zjebane
+                var otherPawns = SecondPlayer.Pawns.Where(p => p.X + p.Y == newX + newY).ToList();
+                if (newY> oldY)
+                {
+                    otherPawns = otherPawns.Where(p => p.Y > oldY && p.Y < newY).ToList();
+                }
+                else
+                {
+                    otherPawns = otherPawns.Where(p => p.Y < oldY && p.Y > newY).ToList();
+                }
+                if (otherPawns.Count == 1)
+                {
+                    SecondPlayer.Pawns.Remove(otherPawns.First());
+                    StateHasChanged();
+                    return true;
+                }
+            
+                if (otherPawns.Count > 1)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                var otherPawns = FirstPlayer.Pawns.Where(p => p.X + p.Y == newX + newY).ToList();
+                if (newY> oldY)
+                {
+                    otherPawns = otherPawns.Where(p => p.Y > oldY && p.Y < newY).ToList();
+                }
+                else
+                {
+                    otherPawns = otherPawns.Where(p => p.Y < oldY && p.Y > newY).ToList();
+                }
+                if (otherPawns.Count == 1)
+                {
+                    FirstPlayer.Pawns.Remove(otherPawns.First());
+                    StateHasChanged();
+                    return true;
+                }
+                if (otherPawns.Count > 1)
+                {
+                    return false;
+                }
+            }
+        }
+        
+        if (oldX - oldY == newX - newY)
+        {
+            if (CurrentPlayer.Equals(FirstPlayer))
+            {
+                // tu warunki są zjebane
+                var otherPawns = SecondPlayer.Pawns.Where(p => p.X - p.Y == newX - newY ).ToList();
+                if (newY> oldY)
+                {
+                    otherPawns = otherPawns.Where(p => p.Y > oldY && p.Y < newY).ToList();
+                }
+                else
+                {
+                    otherPawns = otherPawns.Where(p => p.Y < oldY && p.Y > newY).ToList();
+                }
+                if (otherPawns.Count == 1)
+                {
+                    SecondPlayer.Pawns.Remove(otherPawns.First());
+                    StateHasChanged();
+                    return true;
+                }
+            
+                if (otherPawns.Count > 1)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                var otherPawns = FirstPlayer.Pawns.Where(p => p.X - p.Y == newX - newY).ToList();
+                if (newX > oldX)
+                {
+                    otherPawns = otherPawns.Where(p => p.X > oldX && p.Y < newY).ToList();
+                }
+                else
+                {
+                    otherPawns = otherPawns.Where(p => p.X < oldX && p.Y > newY).ToList();
+                }
+                if (otherPawns.Count == 1)
+                {
+                    FirstPlayer.Pawns.Remove(otherPawns.First());
+                    StateHasChanged();
+                    return true;
+                }
+                if (otherPawns.Count > 1)
+                {
+                    return false;
+                }
+            }
+        }
+        
+        
+        // normalne ruchy
+        if (oldX + oldY == newX + newY)
+        {
+            return true;
+        }
+
+        if (oldX - oldY == newX - newY)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool IsFieldAvalaibleForPawn(int oldX, int oldY, int newX, int newY)
+    {
+        Pawn otherPawn;
+        if (!IsFieldOccupied(newX, newY)) return false;
+
+        //bicie
+        if (CurrentPlayer.Equals(FirstPlayer))
+        {
+            otherPawn = SecondPlayer.Pawns.FirstOrDefault(p => p.X == (oldX + newX) / 2 && p.Y == (oldY + newY) / 2);
+            if (otherPawn is not null)
+            {
+                SecondPlayer.Pawns.Remove(otherPawn);
+                StateHasChanged();
+                return true;
+            }
+
+
+        }
+        else
+        {
+            otherPawn = FirstPlayer.Pawns.FirstOrDefault(p => p.X == (oldX + newX) / 2 && p.Y == (oldY + newY) / 2);
+            if (otherPawn is not null)
+            {
+                FirstPlayer.Pawns.Remove(otherPawn);
+                StateHasChanged();
+                return true;
+            }
+
+        }
+
+        // normalne ruchy
+        if (oldX != newX - 1 && oldX != newX + 1)
+        {
+            return false;
+        }
+
+        if (oldY != newY - 1 && oldY != newY + 1)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool IsFieldOccupied(int newX, int newY)
+    {
+        //Czy jest zajete
+        if (FirstPlayer.Pawns.FirstOrDefault(p => p.X == newX && p.Y == newY) is not null)
+        {
+            return false;
+        }
+        
+        if (SecondPlayer.Pawns.FirstOrDefault(p => p.X == newX && p.Y == newY) is not null)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+
+}

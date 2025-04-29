@@ -1,0 +1,119 @@
+﻿@using System.Text
+@using Checkers.Models
+@using Microsoft.Extensions.Primitives
+@rendermode InteractiveServer
+<style>
+    .tile{
+        width: 80px;
+        height: 80px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: black solid 1px;
+        
+    }
+    
+    .queen{
+        border: gold solid 2px;
+    }
+    
+    .dark-tile{
+        background-color: maroon;
+    }
+    
+    .circle
+    {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+    }
+    .active-circle
+    {
+        background-color: red;
+    }
+
+    .white-circle
+    {
+        background-color: white;
+    }
+
+    .black-circle
+    {
+        background-color: black;
+    }
+</style>
+
+<div class="@GetClassForTile()" @onclick="Click">
+    @if (Pawn is not null)
+    {
+        <div class="@GetClassForPawn()">
+        </div>
+    }
+</div>
+
+
+@code
+{
+    [Parameter]
+    public int Y { get; set; }
+    [Parameter]
+    public int X { get; set; }
+    [Parameter]
+    public Pawn Pawn { get; set; }
+    [Parameter]
+    public Func<int, int, bool> ParentMethod { get; set; }
+
+    private string GetClassForPawn()
+    {
+        var sb = new StringBuilder();
+
+        sb.Append("circle ");
+        
+        if (Pawn.IsActive)
+        {
+            sb.Append("active-circle ");
+            return sb.ToString();
+        }
+        
+        if (Pawn.Color == Color.BLACK)
+        {
+            sb.Append("black-circle ");
+        }
+        else
+        {
+            sb.Append("white-circle ");
+        }
+
+        if (Pawn.IsCrowned)
+        {
+            sb.Append("queen");
+        }
+        else
+        {
+            sb.Append("pawn");
+        }
+        return sb.ToString();
+    }
+
+    private string GetClassForTile()
+    {
+        if ((Y % 2 == 0 && X % 2 == 1 ) || (Y % 2 == 1 && X % 2 == 0))
+        {
+            return "tile dark-tile";
+        }
+
+
+
+        return "tile";
+    }
+    
+    private void Click()
+    {
+
+        ParentMethod.Invoke(X, Y);
+
+        Console.WriteLine($"Tile {X} {Y} has been clicked");
+    }
+    
+}
+
