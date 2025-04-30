@@ -3,6 +3,8 @@
 @using Checkers.Models
 @using Checkers.Components.Elements
 @using Microsoft.Extensions.Internal
+@inject Checkers.Services.ILogservice LogService;
+
 @rendermode InteractiveServer
 
 <style>
@@ -44,7 +46,7 @@
     }
 </div>
 
-<History/>
+<History Logs="@LogService.GetLogs()"/>
 
 
 
@@ -113,6 +115,7 @@
 
         if (IsFieldAvalaible(oldPawnPosition.X, oldPawnPosition.Y, x, y, oldPawnPosition.IsCrowned))
         {
+            LogService.Log($"PLAYER {CurrentPlayer.Color.ToString()} moves pawn from {oldPawnPosition.X} {oldPawnPosition.Y} to {x} {y}");
             Console.WriteLine("GIT");
         }
         else

@@ -1,0 +1,41 @@
+﻿<style>
+    .moveslist
+    {
+        display: flex;
+        flex-direction: column;
+        margin: 5px;
+        border: 1px solid maroon;
+        height: 600px;
+        width: 100%;
+        scroll-behavior: auto;
+    }
+    
+    .history-wrapper
+    {
+        justify-content: center;
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        width: 400px;
+    }
+</style>
+
+<div>
+    <h3 class="history-wrapper">History</h3>
+
+    <div class="moveslist">
+        @if (Logs is not null)
+        {
+            @foreach (var log in Logs)
+            {
+                <p>@log</p>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<string> Logs { get; set; }
+    
+}
